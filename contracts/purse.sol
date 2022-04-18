@@ -59,9 +59,9 @@ contract PurseContract {
     uint256 public contract_total_collateral_balance; 
     mapping(address => bool) approve_To_Claim_Without_Complete_Votes; // maps a user address to true to approve the user to claim even without complete votes
 
-    address _address_of_token = 0xc7AD46e0b8a400Bb3C915120d284AafbA8fc4735; //address of acceptable erc20 token - basically a stable coin DAI-rinkeby
+    address _address_of_token; //address of acceptable erc20 token - basically a stable coin DAI-rinkeby
     
-    IERC20 tokenInstance = IERC20(_address_of_token);
+    IERC20 tokenInstance;
     Purse purse; //instantiate struct purse
     uint256 public deposit_amount; //the deployer of each purse will set this amount which every other person to join will deposit
     uint256 public max_member_num;
@@ -98,7 +98,8 @@ contract PurseContract {
         uint256 _amount,
         uint256 _collateral,
         uint256 _max_member,
-        uint256 time_interval
+        uint256 time_interval,
+        address _tokenAddress
     ) payable {
         deposit_amount = _amount; //set this amount to deposit_amount
         max_member_num = _max_member; //set max needed member
@@ -106,7 +107,7 @@ contract PurseContract {
         required_collateral = _required_collateral;
         require(
             _collateral == _required_collateral,
-            "collateral should be deposit amount multiplied by (max number of expected member - 1)"
+            "incorrect collateral amount"
         );
         //  require(tokenInstance.balanceOf(address(this)) == (_amount + required_collateral), 'deposit of funds and collateral not happening, ensure you are deploying fron PurseFactory Contract');
         memberToDeposit[_creator] = _amount; //
@@ -119,6 +120,8 @@ contract PurseContract {
         purse.purseState = PurseState.Open; //set purse state to Open
         contract_total_collateral_balance += _collateral; //increment mapping for all collaterals
         purse.timeCreated = block.timestamp;
+        _address_of_token = _tokenAddress;
+        tokenInstance = IERC20(_tokenAddress);
 
         emit PurseCreated(_creator, _amount, _max_member, block.timestamp);
     }

@@ -38,7 +38,6 @@ describe("purse and purse factory functionalities", ()=> {
         const approveTx= await (await testToken.connect(user1).approve(purseFactory.address, 40)).wait();
         console.log(approveTx, "approve tx");
          console.log("creating a purse")
-        mineNext()
          
         const purse = await purseFactory.connect(user1).createPurse(20, 40, 3, 3, 1);
         console.log(await purse.wait(), "deployed purse")
