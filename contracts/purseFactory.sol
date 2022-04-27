@@ -7,7 +7,7 @@ import './purse.sol';
 
 contract PurseFactory{
     
-    event PurseCreated(address _creator, uint256 starting_amount, uint256 max_members, uint256 _time_created, address tokenAddress);
+    event PurseCreated(address _creator, uint256 starting_amount, uint256 max_members, uint256 _time_created, address tokenAddress, address purseAddress);
     
     
      //0xf0169620C98c21341aBaAeaFB16c69629Dafc06b    
@@ -28,7 +28,7 @@ contract PurseFactory{
         id_to_purse[address(purse)] = purse_count;
         purseToChatId[address(purse)] = chatId;
         
-        emit PurseCreated(msg.sender, contribution_amount, _max_member, block.timestamp, _tokenAddress);
+        emit PurseCreated(msg.sender, contribution_amount, _max_member, block.timestamp, _tokenAddress, address(purse));
     }
     
     function allPurse()public view returns(address[]memory){

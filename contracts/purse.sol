@@ -30,45 +30,71 @@ contract PurseContract {
         Closed,
         Terminate
     }
+
+
     struct Purse {
         address[] members;
         PurseState purseState;
+        uint256 time_interval;
+        uint256 timeCreated;
+        uint256 contract_total_deposit_balance; 
+        uint256 contract_total_collateral_balance; 
+        uint256 deposit_amount; //the deployer of each purse will set this amount which every other person to join will deposit
+        uint256 max_member_num;
+        uint256 required_collateral;
+        uint256 purseId;
+        uint256 increment_in_membership;
+        uint256 num_of_members_who_has_recieved_funds;
+        address _address_of_token;
+        address purseAddress;
+
+    }
+
+    
+        mapping(address => bool) public  isPurseMember;
+        mapping(address => uint256) public memberToCollateral; //map a user tp ccollateral deposited
+        mapping(address => uint256) public memberToDeposit;
+        mapping(address => bool) public member_has_recieved;
+        mapping(address => mapping(address => bool)) public has_donated_for_member;
+        mapping(address => uint256) public userClaimableDeposit;
+        mapping(address => bool) public approve_To_Claim_Without_Complete_Votes;
+        mapping(address => uint256) public votes_for_member_to_recieve_funds;
+        mapping(address => bool) public member_close_Purse_Vote;
+        mapping(address => bool) public member_reOpen_Purse_Vote;
+        mapping(address => bool) public member_terminate_PurseVote;
+        
+
+    
+    
+    struct MemberVoteForPurseState{
         uint256 voteToClose;
         uint256 voteToReOpen;
         uint256 voteToTerminate;
-        uint256 time_interval;
-        uint256 timeCreated;
+
     }
 
-    address[] purseMembers;
-    mapping(address => uint256) public memberToCollateral; //map a user tp ccollateral deposited
-    mapping(address => uint256) public memberToDeposit; //map a user to amount deposited- ofcourse all members will deposit same amount
-    mapping(address => bool) public isPurseMember; //map a user's membership of a purse to true
-    mapping(address => Purse) public memberToPurse; //map user to all the purse he is invloved in
-    mapping(address => bool) public member_close_Purse_Vote;
-    mapping(address => bool) public member_reOpen_Purse_Vote;
-    mapping(address => bool) public member_terminate_PurseVote;
-    mapping(address => bool) public member_has_recieved; // maps a member address to check wether he has recieved a round of contribution or not
-    mapping(address => uint256) public votes_for_member_to_recieve_funds; //maps a user to no of votes to have funds received- this will be required to be equal to no of members in a group
-    mapping(address => mapping(address => bool)) public has_donated_for_member;
-    mapping(address => uint256) public userClaimableDeposit;
+
+
+     //map a user to amount deposited- ofcourse all members will deposit same amount
+     //map a user's membership of a purse to true
+     //map user to all the purse he is invloved in
+    
+     // maps a member address to check wether he has recieved a round of contribution or not
+     //maps a user to no of votes to have funds received- this will be required to be equal to no of members in a group
+    
+    
     
 
     //these next 2 should be changed to a regular state variable instead
-    uint256 public contract_total_deposit_balance; 
-    uint256 public contract_total_collateral_balance; 
-    mapping(address => bool) approve_To_Claim_Without_Complete_Votes; // maps a user address to true to approve the user to claim even without complete votes
+    
+     // maps a user address to true to approve the user to claim even without complete votes
 
-    address _address_of_token; //address of acceptable erc20 token - basically a stable coin DAI-rinkeby
+     //address of acceptable erc20 token - basically a stable coin DAI-rinkeby
     
     IERC20 tokenInstance;
-    Purse purse; //instantiate struct purse
-    uint256 public deposit_amount; //the deployer of each purse will set this amount which every other person to join will deposit
-    uint256 public max_member_num;
-    uint256 public required_collateral;
-    uint256 public purseId;
-    uint256 public increment_in_membership;
-    uint256 public num_of_members_who_has_recieved_funds;
+    Purse public purse; //instantiate struct purse
+    MemberVoteForPurseState public memberVoteForPurseState;
+    
     address admin = 0x9dc821bc9B379a002E5bD4A1Edf200c19Bc5F9CA;
 
     //instantiate IBentoxBox
@@ -101,10 +127,10 @@ contract PurseContract {
         uint256 time_interval,
         address _tokenAddress
     ) payable {
-        deposit_amount = _amount; //set this amount to deposit_amount
-        max_member_num = _max_member; //set max needed member
+        purse.deposit_amount = _amount; //set this amount to deposit_amount
+        purse.max_member_num = _max_member; //set max needed member
         uint256 _required_collateral = _amount * (_max_member - 1);
-        required_collateral = _required_collateral;
+        purse.required_collateral = _required_collateral;
         require(
             _collateral == _required_collateral,
             "incorrect collateral amount"
@@ -112,15 +138,14 @@ contract PurseContract {
         //  require(tokenInstance.balanceOf(address(this)) == (_amount + required_collateral), 'deposit of funds and collateral not happening, ensure you are deploying fron PurseFactory Contract');
         memberToDeposit[_creator] = _amount; //
         memberToCollateral[_creator] = _collateral;
-        purseMembers.push(_creator); //push member to array of members
-        purse.members = purseMembers; // set array of members in Purse struct to array of members
+        purse.members.push(_creator); //push member to array of members
         purse.time_interval = time_interval;
-        memberToPurse[_creator] = purse; // map msg.sender to purse
         isPurseMember[_creator] = true; //set msg.sender to be true as a member of the purse already
         purse.purseState = PurseState.Open; //set purse state to Open
-        contract_total_collateral_balance += _collateral; //increment mapping for all collaterals
+        purse.contract_total_collateral_balance += _collateral; //increment mapping for all collaterals
         purse.timeCreated = block.timestamp;
-        _address_of_token = _tokenAddress;
+        purse._address_of_token = _tokenAddress;
+        purse.purseAddress = address(this);
         tokenInstance = IERC20(_tokenAddress);
 
         emit PurseCreated(_creator, _amount, _max_member, block.timestamp);
@@ -138,23 +163,21 @@ contract PurseContract {
             "This purse is not longer accepting members"
         );
         require(
-            isPurseMember[msg.sender] == false,
+           isPurseMember[msg.sender] == false,
             "you are already a member in this purse"
         );
         require(
-            _collateral == required_collateral,
+           _collateral == purse.required_collateral,
             "collateral should be deposit amount multiplied by (max expected member - 1)"
         );
         tokenInstance.transferFrom(msg.sender, address(this), (_collateral));
-        memberToCollateral[msg.sender] = _collateral;
-        purseMembers.push(msg.sender); //push member to array of members
-        purse.members = purseMembers; // set array of members in Purse struct to array of members
-        memberToPurse[msg.sender] = purse; // map msg.sender to purse
+       memberToCollateral[msg.sender] = _collateral;
+        purse.members.push(msg.sender); //push member to array of members
         isPurseMember[msg.sender] = true; //set msg.sender to be true as a member of the purse already
-        contract_total_collateral_balance += _collateral; //increment mapping for all collaterals
+        purse.contract_total_collateral_balance += _collateral; //increment mapping for all collaterals
 
         //close purse if max_member_num is reached
-        if (purse.members.length == max_member_num) {
+        if (purse.members.length == purse.max_member_num) {
             purse.purseState = PurseState.Closed;
         }
     }
@@ -191,22 +214,26 @@ contract PurseContract {
             "This purse is still opened"
         );
         require(
-            isPurseMember[msg.sender] == true,
+           isPurseMember[msg.sender] == true,
             "only members of this purse can vote to re open this purse"
         );
         require(
-            member_reOpen_Purse_Vote[msg.sender] == false,
+           member_reOpen_Purse_Vote[msg.sender] == false,
             "You have already voted, you cannot vote more than once to re oprn a purse"
         ); //check to ensure a member cant vote more than once to re open purse
-        increment_in_membership = _incrementInMember;
+        purse.increment_in_membership = _incrementInMember;
         require(
-            _incrementInMember == increment_in_membership,
+            _incrementInMember == purse.increment_in_membership,
             " this does not look like the increment in members number your group agreed on"
         );
 
-        purse.voteToReOpen++;
-        //set state of purse to open
-        purse.purseState = PurseState.Open;
+        memberVoteForPurseState.voteToReOpen++;
+
+        if(memberVoteForPurseState.voteToReOpen == purse.max_member_num){
+             //set state of purse to open
+            purse.purseState = PurseState.Open;
+        }
+       
 
         return true;
     }
@@ -221,12 +248,12 @@ contract PurseContract {
         );
 
         require(has_donated_for_member[msg.sender][_member] == false, "you have donated for this member already");
-        userClaimableDeposit[_member] += deposit_amount;
-        contract_total_deposit_balance += deposit_amount; 
+       userClaimableDeposit[_member] += purse.deposit_amount;
+       purse.contract_total_deposit_balance += purse.deposit_amount; 
 
-        has_donated_for_member[msg.sender][_member] = true;
-        tokenInstance.transferFrom(msg.sender, address(this), deposit_amount);
-        emit DonationDeposited(msg.sender, deposit_amount, address(this), block.timestamp);
+       has_donated_for_member[msg.sender][_member] = true;
+        tokenInstance.transferFrom(msg.sender, address(this), purse.deposit_amount);
+        emit DonationDeposited(msg.sender, purse.deposit_amount, address(this), block.timestamp);
 
 
     }
@@ -239,23 +266,23 @@ contract PurseContract {
             "only purse members can claim contributions"
         );
         require(
-            member_has_recieved[msg.sender] == false,
+           member_has_recieved[msg.sender] == false,
             "You have recieved a round of contribution already"
         );
         require(userClaimableDeposit[msg.sender] > 0, "You currently have no deposit for you to claim");
 
 
 
-        if(userClaimableDeposit[msg.sender] < (deposit_amount * (max_member_num -1) )) {
+        if(userClaimableDeposit[msg.sender] < (purse.deposit_amount * (purse.max_member_num -1) )) {
             require(approve_To_Claim_Without_Complete_Votes[msg.sender] == true,
              "you could either approve yourself or let another team member approve that you can claim without complete donation using the approveToClaimWithoutCompleteVotes function ");
-            num_of_members_who_has_recieved_funds += 1;
-            member_has_recieved[msg.sender] = true;
+           purse.num_of_members_who_has_recieved_funds += 1;
+           member_has_recieved[msg.sender] = true;
             tokenInstance.transfer(msg.sender, userClaimableDeposit[msg.sender]);
             emit ClaimedPart(msg.sender, address(this), userClaimableDeposit[msg.sender], block.timestamp);
         }
         else{
-            num_of_members_who_has_recieved_funds += 1;
+            purse.num_of_members_who_has_recieved_funds += 1;
             member_has_recieved[msg.sender] = true;
             tokenInstance.transfer(msg.sender, userClaimableDeposit[msg.sender]);
             emit ClaimedFull(msg.sender, address(this), userClaimableDeposit[msg.sender], block.timestamp);
@@ -265,7 +292,9 @@ contract PurseContract {
     // this function is meant to give the contract a go-ahead to disburse funds to a member even though he doesnt have complete votes_for_member_to_recieve_funds
     // this for instance where a member(s) seem unresponsive in the purse group to vote for another person
     function approveToClaimWithoutCompleteVotes(address _member) public {
-        require(isPurseMember[msg.sender] == true, "only purse members please");
+        require(
+            isPurseMember[msg.sender] == true, "only purse members please"
+            );
         require(
             isPurseMember[_member] == true,
             "This provided address is not a member"
@@ -281,18 +310,18 @@ contract PurseContract {
             "This provided address is not a member"
         );
 
-        require(userClaimableDeposit[msg.sender] < deposit_amount * (max_member_num -1), "you claimed full donation already");
+        require(userClaimableDeposit[msg.sender] < purse.deposit_amount * (purse.max_member_num -1), "you claimed full donation already");
         
     }
 
-    //any member can call this function
+/*
     function deposit_funds_to_bentoBox() public {
         require(isPurseMember[msg.sender] == true, "only purse members please");
         require(
-            purse.members.length == max_member_num,
+            purse.members.length == purse.max_member_num,
             "members to be in purse are yet to be completed, so collaterals are not complete"
         );
-        uint256 MAX_UINT256 = contract_total_collateral_balance;
+        uint256 MAX_UINT256 = purse.contract_total_collateral_balance;
         tokenInstance.approve(bentoBox_address, MAX_UINT256);
         bentoBoxInstance.deposit(
             tokenInstance,
@@ -359,7 +388,9 @@ contract PurseContract {
         }
     }
 
-    function purse_details() public view returns (Purse memory) {
-        return purse;
+    */
+    function purseMembers() public view returns(address[] memory){
+        return purse.members;
     }
+
 }
