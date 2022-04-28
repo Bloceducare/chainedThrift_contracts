@@ -33,7 +33,7 @@ contract PurseContract {
 
 
     struct Purse {
-        address[] members;
+        
         PurseState purseState;
         uint256 time_interval;
         uint256 timeCreated;
@@ -62,6 +62,8 @@ contract PurseContract {
         mapping(address => bool) public member_close_Purse_Vote;
         mapping(address => bool) public member_reOpen_Purse_Vote;
         mapping(address => bool) public member_terminate_PurseVote;
+
+        address[] members;
         
 
     
@@ -138,7 +140,7 @@ contract PurseContract {
         //  require(tokenInstance.balanceOf(address(this)) == (_amount + required_collateral), 'deposit of funds and collateral not happening, ensure you are deploying fron PurseFactory Contract');
         memberToDeposit[_creator] = _amount; //
         memberToCollateral[_creator] = _collateral;
-        purse.members.push(_creator); //push member to array of members
+        members.push(_creator); //push member to array of members
         purse.time_interval = time_interval;
         isPurseMember[_creator] = true; //set msg.sender to be true as a member of the purse already
         purse.purseState = PurseState.Open; //set purse state to Open
@@ -172,12 +174,12 @@ contract PurseContract {
         );
         tokenInstance.transferFrom(msg.sender, address(this), (_collateral));
        memberToCollateral[msg.sender] = _collateral;
-        purse.members.push(msg.sender); //push member to array of members
+        members.push(msg.sender); //push member to array of members
         isPurseMember[msg.sender] = true; //set msg.sender to be true as a member of the purse already
         purse.contract_total_collateral_balance += _collateral; //increment mapping for all collaterals
 
         //close purse if max_member_num is reached
-        if (purse.members.length == purse.max_member_num) {
+        if (members.length == purse.max_member_num) {
             purse.purseState = PurseState.Closed;
         }
     }
@@ -390,7 +392,7 @@ contract PurseContract {
 
     */
     function purseMembers() public view returns(address[] memory){
-        return purse.members;
+        return members;
     }
 
 }
