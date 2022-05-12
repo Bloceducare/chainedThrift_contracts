@@ -42,8 +42,5 @@ describe("purse and purse factory functionalities", ()=> {
         const purse = await purseFactory.connect(user1).createPurse(20, 40, 3, 3, 1);
         console.log(await purse.wait(), "deployed purse")
     
-
     })
-
-    
 })

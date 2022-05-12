@@ -65,9 +65,6 @@ contract PurseContract {
 
         address[] members;
         
-
-    
-    
     struct MemberVoteForPurseState{
         uint256 voteToClose;
         uint256 voteToReOpen;
@@ -316,11 +313,11 @@ contract PurseContract {
         
     }
 
-/*
+
     function deposit_funds_to_bentoBox() public {
         require(isPurseMember[msg.sender] == true, "only purse members please");
         require(
-            purse.members.length == purse.max_member_num,
+            members.length == purse.max_member_num,
             "members to be in purse are yet to be completed, so collaterals are not complete"
         );
         uint256 MAX_UINT256 = purse.contract_total_collateral_balance;
@@ -329,16 +326,16 @@ contract PurseContract {
             tokenInstance,
             address(this),
             address(this),
-            contract_total_collateral_balance,
+            purse.contract_total_collateral_balance,
             0
         );
 
-        contract_total_collateral_balance = 0;
+        purse.contract_total_collateral_balance = 0;
     }
 
     function bentoBox_balance() public view returns (uint256) {
         uint256 bento_box_balance = bentoBoxInstance.balanceOf(
-            _address_of_token,
+            purse._address_of_token,
             address(this)
         );
         return bento_box_balance;
@@ -349,7 +346,7 @@ contract PurseContract {
         require(isPurseMember[msg.sender] == true, "only purse members please");
         //    require(block.timestamp >= (purse.time_interval * max_member_num), 'Not yet time for withdrawal');
         require(
-            num_of_members_who_has_recieved_funds == purse.members.length,
+            purse.num_of_members_who_has_recieved_funds == members.length,
             "Not yet time, not all members have recieved a round of contribution"
         );
         //      require(
@@ -358,10 +355,10 @@ contract PurseContract {
         //        }, 'Not all members have recieved thier round of contribution'
         //          );
         uint256 bento_box_balance = bentoBoxInstance.balanceOf(
-            _address_of_token,
+           purse._address_of_token,
             address(this)
         );
-        //bentoBox withdraw functiosn returns 2 values, in this cares, shares will be what has the entire values- our collateral deposits plus
+        //bentoBox withdraw functiosn returns 2 values, in this cares, shares will be what has the entire values- our collateral deposits plus yields
         uint256 shares;
         uint256 amount;
         (amount, shares) = bentoBoxInstance.withdraw(
@@ -372,25 +369,63 @@ contract PurseContract {
             bento_box_balance
         );
         //calculate yields
-        uint256 yields = shares - (required_collateral * max_member_num); //shares will remain total collateral at this point
+        uint256 yields = shares - (purse.required_collateral * purse.max_member_num); //shares will remain total collateral at this point
         //20% of yields goes to purseFactory admin
-        uint256 yields_to_admin = (yields * 20) / 100;
+        uint256 yields_to_admin = (yields * 8) / 100;
         tokenInstance.transfer(admin, yields_to_admin);
 
         //yields balance  shared equally amongst members
         uint256 yields_to_members = yields - yields_to_admin;
         //share remaining yields equally among members and return collaterals
-        uint256 individual_yields = yields_to_members / max_member_num;
-        uint256 individual_collateral_returns = required_collateral;
-        for (uint256 i = 0; i < purse.members.length; i++) {
+        uint256 individual_yields = yields_to_members / purse.max_member_num;
+        uint256 individual_collateral_returns = purse.required_collateral;
+        for (uint256 i = 0; i < members.length; i++) {
             tokenInstance.transfer(
-                purse.members[i],
+                members[i],
                 (individual_yields + individual_collateral_returns)
             );
         }
     }
 
-    */
+    function calculateMissedDonationForUser(address _memberAdress) public view returns(address[] memory, uint256 ){
+        require(isPurseMember[_memberAdress] == true, "only purse members please");
+
+        address[] memory members_who_didnt_donate_for_user = new address[](members.length -1);
+
+        for(uint256 i =0; i < members.length; i++){
+            if(members[i] != _memberAdress && has_donated_for_member[members[i]][_memberAdress] == false ){
+                members_who_didnt_donate_for_user[i] = (members[i]);
+                
+            }
+        }
+
+        return(members_who_didnt_donate_for_user, members_who_didnt_donate_for_user.length * purse.deposit_amount);
+
+          
+    }
+
+    function calculateMissedDonationByUser(address _memberAdress) public view returns(address[] memory, uint256 ){
+        require(isPurseMember[_memberAdress] == true, "only purse members please");
+
+        address[] memory members_who_member_didnt_donate_for = new address[](members.length -1);
+
+        for(uint256 i =0; i < members.length; i++){
+            if(members[i] != _memberAdress && has_donated_for_member[_memberAdress][members[i]] == false ){
+                members_who_member_didnt_donate_for[i] = (members[i]);
+                
+            }
+        }
+
+        return(members_who_member_didnt_donate_for, members_who_member_didnt_donate_for.length * purse.deposit_amount);
+
+          
+    }
+
+    function withdrawCollateralAndYields() public{
+
+    }
+
+    
     function purseMembers() public view returns(address[] memory){
         return members;
     }
