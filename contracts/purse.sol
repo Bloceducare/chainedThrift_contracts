@@ -62,8 +62,11 @@ contract PurseContract {
         mapping(address => bool) public member_close_Purse_Vote;
         mapping(address => bool) public member_reOpen_Purse_Vote;
         mapping(address => bool) public member_terminate_PurseVote;
+        mapping(address => bool) public hasWithdrawnCollateralAndYield;
 
-        address[] members;
+        address[] public members;
+        uint256 public total_returns_to_members;
+        uint256 public yields_to_members;
         
     struct MemberVoteForPurseState{
         uint256 voteToClose;
@@ -96,7 +99,7 @@ contract PurseContract {
     
     address admin = 0x9dc821bc9B379a002E5bD4A1Edf200c19Bc5F9CA;
 
-    //instantiate IBentoxBox
+    //instantiate IBentoxBox on mumbai
     address bentoBox_address = 0xF5BCE5077908a1b7370B9ae04AdC565EBd643966;
     IBentoxBox bentoBoxInstance = IBentoxBox(bentoBox_address);
 
@@ -116,6 +119,13 @@ contract PurseContract {
     event ClaimedFull(address indexed _member, address indexed purseAddress, uint256 _amount, uint256 dateClaimed );
 
     event ClaimedPart(address indexed _member, address indexed purseAddress, uint256 _amount, uint256 dateClaimed );
+
+
+    modifier onlyPurseMember(address _address){
+        require(isPurseMember[msg.sender] == true, "only purse members please");
+        _;
+
+    }
 
     //deposit of collateral for creator happens in token factory- see createPurse function
     constructor(
@@ -239,8 +249,7 @@ contract PurseContract {
 
 
 
-    function depositDonation(address _member) public {
-        require(isPurseMember[msg.sender] == true, "only purse members please");
+    function depositDonation(address _member) public onlyPurseMember(msg.sender) {
         require(
             isPurseMember[_member] == true,
             "This provided address is not a member"
@@ -258,12 +267,7 @@ contract PurseContract {
     }
 
     // member who have been voted for as next will be the one to claim
-    function claimDonations() public {
-        // checks to ensure only purse members can attempt to claim
-        require(
-            isPurseMember[msg.sender] == true,
-            "only purse members can claim contributions"
-        );
+    function claimDonations() public onlyPurseMember(msg.sender) {
         require(
            member_has_recieved[msg.sender] == false,
             "You have recieved a round of contribution already"
@@ -290,10 +294,7 @@ contract PurseContract {
 
     // this function is meant to give the contract a go-ahead to disburse funds to a member even though he doesnt have complete votes_for_member_to_recieve_funds
     // this for instance where a member(s) seem unresponsive in the purse group to vote for another person
-    function approveToClaimWithoutCompleteVotes(address _member) public {
-        require(
-            isPurseMember[msg.sender] == true, "only purse members please"
-            );
+    function approveToClaimWithoutCompleteVotes(address _member) public onlyPurseMember(msg.sender) {
         require(
             isPurseMember[_member] == true,
             "This provided address is not a member"
@@ -302,8 +303,7 @@ contract PurseContract {
     }
 
     // a function to let a user deduct funds from the collateral returned for another user who didnt donate for himself
-    function deductOmittedDonationFromCollateral(address _member) public {
-        require(isPurseMember[msg.sender] == true, "only purse members please");
+    function deductOmittedDonationFromCollateral(address _member) public onlyPurseMember(msg.sender) {
         require(
             isPurseMember[_member] == true,
             "This provided address is not a member"
@@ -314,8 +314,8 @@ contract PurseContract {
     }
 
 
-    function deposit_funds_to_bentoBox() public {
-        require(isPurseMember[msg.sender] == true, "only purse members please");
+    function deposit_funds_to_bentoBox() public onlyPurseMember(msg.sender) {
+        
         require(
             members.length == purse.max_member_num,
             "members to be in purse are yet to be completed, so collaterals are not complete"
@@ -342,8 +342,7 @@ contract PurseContract {
     }
 
     //any member can call this function
-    function withdraw_funds_from_bentoBox() public {
-        require(isPurseMember[msg.sender] == true, "only purse members please");
+    function withdraw_funds_from_bentoBox() public onlyPurseMember(msg.sender) {
         //    require(block.timestamp >= (purse.time_interval * max_member_num), 'Not yet time for withdrawal');
         require(
             purse.num_of_members_who_has_recieved_funds == members.length,
@@ -372,25 +371,16 @@ contract PurseContract {
         uint256 yields = shares - (purse.required_collateral * purse.max_member_num); //shares will remain total collateral at this point
         //20% of yields goes to purseFactory admin
         uint256 yields_to_admin = (yields * 8) / 100;
+         yields_to_members = yields - yields_to_admin;
         tokenInstance.transfer(admin, yields_to_admin);
 
-        //yields balance  shared equally amongst members
-        uint256 yields_to_members = yields - yields_to_admin;
-        //share remaining yields equally among members and return collaterals
-        uint256 individual_yields = yields_to_members / purse.max_member_num;
-        uint256 individual_collateral_returns = purse.required_collateral;
-        for (uint256 i = 0; i < members.length; i++) {
-            tokenInstance.transfer(
-                members[i],
-                (individual_yields + individual_collateral_returns)
-            );
-        }
+        total_returns_to_members = shares - yields_to_admin;
+       
     }
 
-    function calculateMissedDonationForUser(address _memberAdress) public view returns(address[] memory, uint256 ){
-        require(isPurseMember[_memberAdress] == true, "only purse members please");
-
+    function calculateMissedDonationForUser(address _memberAdress) public view onlyPurseMember(_memberAdress) returns(address[] memory, uint256 ){
         address[] memory members_who_didnt_donate_for_user = new address[](members.length -1);
+
 
         for(uint256 i =0; i < members.length; i++){
             if(members[i] != _memberAdress && has_donated_for_member[members[i]][_memberAdress] == false ){
@@ -404,9 +394,8 @@ contract PurseContract {
           
     }
 
-    function calculateMissedDonationByUser(address _memberAdress) public view returns(address[] memory, uint256 ){
-        require(isPurseMember[_memberAdress] == true, "only purse members please");
-
+    function calculateMissedDonationByUser(address _memberAdress) public view onlyPurseMember(_memberAdress) returns(address[] memory, uint256 ){
+       
         address[] memory members_who_member_didnt_donate_for = new address[](members.length -1);
 
         for(uint256 i =0; i < members.length; i++){
@@ -421,13 +410,22 @@ contract PurseContract {
           
     }
 
-    function withdrawCollateralAndYields() public{
+    function withdrawCollateralAndYields() public onlyPurseMember(msg.sender){
+        require(hasWithdrawnCollateralAndYield[msg.sender] == false, "You have withdrawn your collateral and yields already");
 
+        // calculate the amount of rounds this user missed
+        (address[] memory members, uint256 amountToBeDeducted) = calculateMissedDonationByUser(msg.sender);
+
+        //calculate amount of donatons to user that was missed
+        (address [] memory _members, uint256 amountToBeAdded) = calculateMissedDonationForUser(msg.sender);
+
+        uint256 intendedTotalReturnsForUser = (purse.required_collateral) + (yields_to_members / purse.max_member_num);  
+
+        uint256 finalTotalReturnsToUser = intendedTotalReturnsForUser + amountToBeAdded - amountToBeDeducted;
+
+        hasWithdrawnCollateralAndYield[msg.sender] = true;
+        tokenInstance.transfer(msg.sender, finalTotalReturnsToUser);
     }
 
-    
-    function purseMembers() public view returns(address[] memory){
-        return members;
-    }
 
 }
