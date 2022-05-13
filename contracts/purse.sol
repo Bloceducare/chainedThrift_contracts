@@ -302,17 +302,6 @@ contract PurseContract {
         approve_To_Claim_Without_Complete_Votes[_member] = true;
     }
 
-    // a function to let a user deduct funds from the collateral returned for another user who didnt donate for himself
-    function deductOmittedDonationFromCollateral(address _member) public onlyPurseMember(msg.sender) {
-        require(
-            isPurseMember[_member] == true,
-            "This provided address is not a member"
-        );
-
-        require(userClaimableDeposit[msg.sender] < purse.deposit_amount * (purse.max_member_num -1), "you claimed full donation already");
-        
-    }
-
 
     function deposit_funds_to_bentoBox() public onlyPurseMember(msg.sender) {
         
