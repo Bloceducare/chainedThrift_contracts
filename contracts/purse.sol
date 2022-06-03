@@ -63,6 +63,8 @@ contract PurseContract {
         mapping(address => bool) public member_reOpen_Purse_Vote;
         mapping(address => bool) public member_terminate_PurseVote;
         mapping(address => bool) public hasWithdrawnCollateralAndYield;
+        mapping(address => uint256) public userPosition;
+        mapping(uint256 => address) public positionToUser;
 
         address[] public members;
         uint256 public total_returns_to_members;
@@ -105,6 +107,7 @@ contract PurseContract {
 
     //events
     event PurseCreated(
+        address purseAddress,
         address indexed _creator,
         uint256 starting_amount,
         uint256 max_members,
@@ -134,7 +137,8 @@ contract PurseContract {
         uint256 _collateral,
         uint256 _max_member,
         uint256 time_interval,
-        address _tokenAddress
+        address _tokenAddress,
+        uint256 _position
     ) payable {
         purse.deposit_amount = _amount; //set this amount to deposit_amount
         purse.max_member_num = _max_member; //set max needed member
@@ -144,9 +148,12 @@ contract PurseContract {
             _collateral == _required_collateral,
             "incorrect collateral amount"
         );
+        require(_position < _max_member, "position out of range");
         //  require(tokenInstance.balanceOf(address(this)) == (_amount + required_collateral), 'deposit of funds and collateral not happening, ensure you are deploying fron PurseFactory Contract');
         memberToDeposit[_creator] = _amount; //
         memberToCollateral[_creator] = _collateral;
+        userPosition[_creator] = _position;
+        positionToUser[_position] = _creator;
         members.push(_creator); //push member to array of members
         purse.time_interval = time_interval;
         isPurseMember[_creator] = true; //set msg.sender to be true as a member of the purse already
@@ -157,7 +164,7 @@ contract PurseContract {
         purse.purseAddress = address(this);
         tokenInstance = IERC20(_tokenAddress);
 
-        emit PurseCreated(_creator, _amount, _max_member, block.timestamp);
+        emit PurseCreated(address(this), _creator, _amount, _max_member, block.timestamp);
     }
 
 
@@ -166,7 +173,7 @@ contract PurseContract {
         depositDonation() function
         */
 
-    function joinPurse(uint256 _collateral) public {
+    function joinPurse(uint256 _position) public {
         require(
             purse.purseState == PurseState.Open,
             "This purse is not longer accepting members"
@@ -175,15 +182,18 @@ contract PurseContract {
            isPurseMember[msg.sender] == false,
             "you are already a member in this purse"
         );
-        require(
-           _collateral == purse.required_collateral,
-            "collateral should be deposit amount multiplied by (max expected member - 1)"
-        );
-        tokenInstance.transferFrom(msg.sender, address(this), (_collateral));
-       memberToCollateral[msg.sender] = _collateral;
+        
+        for(uint8 i = 0; i < members.length; i++){
+            require(_position != userPosition[members[i]], "position taken");
+        }
+       
+        tokenInstance.transferFrom(msg.sender, address(this), (purse.required_collateral));
+       memberToCollateral[msg.sender] = purse.required_collateral;
         members.push(msg.sender); //push member to array of members
+        userPosition[msg.sender] = _position;
+        positionToUser[_position] = msg.sender;
         isPurseMember[msg.sender] = true; //set msg.sender to be true as a member of the purse already
-        purse.contract_total_collateral_balance += _collateral; //increment mapping for all collaterals
+        purse.contract_total_collateral_balance += purse.required_collateral; //increment mapping for all collaterals
 
         //close purse if max_member_num is reached
         if (members.length == purse.max_member_num) {
@@ -250,12 +260,12 @@ contract PurseContract {
 
 
     function depositDonation(address _member) public onlyPurseMember(msg.sender) {
-        require(
-            isPurseMember[_member] == true,
-            "This provided address is not a member"
-        );
-
+       
+        (address _currentMemberToRecieve, , ) =  currentRoundDetails();
+        require(_member == _currentMemberToRecieve, "not this members round");
         require(has_donated_for_member[msg.sender][_member] == false, "you have donated for this member already");
+        require(member_has_recieved[_member] == false, "this user has recieved donation already");
+        
        userClaimableDeposit[_member] += purse.deposit_amount;
        purse.contract_total_deposit_balance += purse.deposit_amount; 
 
@@ -273,8 +283,6 @@ contract PurseContract {
             "You have recieved a round of contribution already"
         );
         require(userClaimableDeposit[msg.sender] > 0, "You currently have no deposit for you to claim");
-
-
 
         if(userClaimableDeposit[msg.sender] < (purse.deposit_amount * (purse.max_member_num -1) )) {
             require(approve_To_Claim_Without_Complete_Votes[msg.sender] == true,
@@ -403,10 +411,10 @@ contract PurseContract {
         require(hasWithdrawnCollateralAndYield[msg.sender] == false, "You have withdrawn your collateral and yields already");
 
         // calculate the amount of rounds this user missed
-        (address[] memory members, uint256 amountToBeDeducted) = calculateMissedDonationByUser(msg.sender);
+        (, uint256 amountToBeDeducted) = calculateMissedDonationByUser(msg.sender);
 
         //calculate amount of donatons to user that was missed
-        (address [] memory _members, uint256 amountToBeAdded) = calculateMissedDonationForUser(msg.sender);
+        (, uint256 amountToBeAdded) = calculateMissedDonationForUser(msg.sender);
 
         uint256 intendedTotalReturnsForUser = (purse.required_collateral) + (yields_to_members / purse.max_member_num);  
 
@@ -414,6 +422,24 @@ contract PurseContract {
 
         hasWithdrawnCollateralAndYield[msg.sender] = true;
         tokenInstance.transfer(msg.sender, finalTotalReturnsToUser);
+    }
+
+
+    // returns current round details, the member who is meant for the round, current round and time before next round
+    function currentRoundDetails() public view returns(address, uint256, uint256){
+        // a round should span for the time of "interval" set upon purse creation
+
+        //calculte how many of the "intervals" is passed to get what _position/round 
+        uint256 roundPassed = (block.timestamp - purse.timeCreated) / purse.time_interval;
+        uint256 currentRound = roundPassed + 1;
+        uint256 nextRound = currentRound + 1;
+        uint256 timeBeforeNextRound = (currentRound * purse.time_interval) - (block.timestamp);
+
+        //current round is equivalent to position
+        address _member = positionToUser[currentRound];
+
+        return(_member, currentRound, timeBeforeNextRound);
+        
     }
 
 

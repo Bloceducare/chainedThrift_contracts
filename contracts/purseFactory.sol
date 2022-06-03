@@ -16,10 +16,8 @@ contract PurseFactory{
     mapping(address=> uint256) id_to_purse;
     mapping(address => uint256) public purseToChatId;
     
-    
-    
-    function createPurse(uint256 contribution_amount, uint256 _collateral, uint256 _max_member, uint256 time_interval, uint256 chatId, address _tokenAddress)public {
-        PurseContract purse = new PurseContract(msg.sender, contribution_amount, _collateral, _max_member, time_interval, _tokenAddress);
+    function createPurse(uint256 contribution_amount, uint256 _collateral, uint256 _max_member, uint256 time_interval, uint256 chatId, address _tokenAddress, uint8 _position)public {
+        PurseContract purse = new PurseContract(msg.sender, contribution_amount, _collateral, _max_member, time_interval, _tokenAddress, _position);
          IERC20 tokenInstance = IERC20(_tokenAddress);
         //purse factory contract should be approved
         require(tokenInstance.transferFrom(msg.sender, address(purse), (_collateral)), 'transfer to purse not successful');
