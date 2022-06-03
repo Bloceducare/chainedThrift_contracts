@@ -442,5 +442,9 @@ contract PurseContract {
         
     }
 
+    function purseMembers() public view returns(address[] memory){
+        return members;
+    }
+
 
 }

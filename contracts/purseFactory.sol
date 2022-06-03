@@ -32,6 +32,8 @@ contract PurseFactory{
     function allPurse()public view returns(address[]memory){
         return _list_of_purses;
     }
+
+   
     
     
     
