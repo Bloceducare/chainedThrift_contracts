@@ -37,13 +37,14 @@ contract PurseContract {
         PurseState purseState;
         uint256 time_interval;
         uint256 timeCreated;
+        uint256 timeStarted;
         uint256 contract_total_deposit_balance; 
         uint256 contract_total_collateral_balance; 
         uint256 deposit_amount; //the deployer of each purse will set this amount which every other person to join will deposit
         uint256 max_member_num;
         uint256 required_collateral;
         uint256 purseId;
-        uint256 increment_in_membership;
+       // uint256 increment_in_membership;
         uint256 num_of_members_who_has_recieved_funds;
         address _address_of_token;
         address purseAddress;
@@ -134,7 +135,6 @@ contract PurseContract {
     constructor(
         address _creator,
         uint256 _amount,
-        uint256 _collateral,
         uint256 _max_member,
         uint256 time_interval,
         address _tokenAddress,
@@ -144,21 +144,18 @@ contract PurseContract {
         purse.max_member_num = _max_member; //set max needed member
         uint256 _required_collateral = _amount * (_max_member - 1);
         purse.required_collateral = _required_collateral;
-        require(
-            _collateral == _required_collateral,
-            "incorrect collateral amount"
-        );
+    
         require(_position < _max_member, "position out of range");
         //  require(tokenInstance.balanceOf(address(this)) == (_amount + required_collateral), 'deposit of funds and collateral not happening, ensure you are deploying fron PurseFactory Contract');
         memberToDeposit[_creator] = _amount; //
-        memberToCollateral[_creator] = _collateral;
+        memberToCollateral[_creator] = _required_collateral;
         userPosition[_creator] = _position;
         positionToUser[_position] = _creator;
         members.push(_creator); //push member to array of members
         purse.time_interval = time_interval;
         isPurseMember[_creator] = true; //set msg.sender to be true as a member of the purse already
         purse.purseState = PurseState.Open; //set purse state to Open
-        purse.contract_total_collateral_balance += _collateral; //increment mapping for all collaterals
+        purse.contract_total_collateral_balance += _required_collateral; //increment mapping for all collaterals
         purse.timeCreated = block.timestamp;
         purse._address_of_token = _tokenAddress;
         purse.purseAddress = address(this);
@@ -182,6 +179,7 @@ contract PurseContract {
            isPurseMember[msg.sender] == false,
             "you are already a member in this purse"
         );
+        require(_position < purse.max_member_num, "position out of range");
         
         for(uint8 i = 0; i < members.length; i++){
             require(_position != userPosition[members[i]], "position taken");
@@ -198,6 +196,7 @@ contract PurseContract {
         //close purse if max_member_num is reached
         if (members.length == purse.max_member_num) {
             purse.purseState = PurseState.Closed;
+            purse.timeStarted = block.timestamp;
         }
     }
 
@@ -222,42 +221,6 @@ contract PurseContract {
         
        
     } */
-
-    //this function is called if members decided to let more persons join, so this function takes in parameter-which is the number to be allowed in
-    function voteToReOpenPurse(uint256 _incrementInMember)
-        public
-        returns (bool)
-    {
-        require(
-            purse.purseState == PurseState.Closed,
-            "This purse is still opened"
-        );
-        require(
-           isPurseMember[msg.sender] == true,
-            "only members of this purse can vote to re open this purse"
-        );
-        require(
-           member_reOpen_Purse_Vote[msg.sender] == false,
-            "You have already voted, you cannot vote more than once to re oprn a purse"
-        ); //check to ensure a member cant vote more than once to re open purse
-        purse.increment_in_membership = _incrementInMember;
-        require(
-            _incrementInMember == purse.increment_in_membership,
-            " this does not look like the increment in members number your group agreed on"
-        );
-
-        memberVoteForPurseState.voteToReOpen++;
-
-        if(memberVoteForPurseState.voteToReOpen == purse.max_member_num){
-             //set state of purse to open
-            purse.purseState = PurseState.Open;
-        }
-       
-
-        return true;
-    }
-
-
 
     function depositDonation(address _member) public onlyPurseMember(msg.sender) {
        
@@ -430,9 +393,8 @@ contract PurseContract {
         // a round should span for the time of "interval" set upon purse creation
 
         //calculte how many of the "intervals" is passed to get what _position/round 
-        uint256 roundPassed = (block.timestamp - purse.timeCreated) / purse.time_interval;
+        uint256 roundPassed = (block.timestamp - purse.timeStarted) / purse.time_interval;
         uint256 currentRound = roundPassed + 1;
-        uint256 nextRound = currentRound + 1;
         uint256 timeBeforeNextRound = (currentRound * purse.time_interval) - (block.timestamp);
 
         //current round is equivalent to position
@@ -440,10 +402,6 @@ contract PurseContract {
 
         return(_member, currentRound, timeBeforeNextRound);
         
-    }
-
-    function purseMembers() public view returns(address[] memory){
-        return members;
     }
 
 
