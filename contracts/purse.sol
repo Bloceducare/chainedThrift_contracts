@@ -401,12 +401,12 @@ contract PurseContract {
         uint256 roundPassed = (block.timestamp - purse.timeStarted) / purse.time_interval;
 
         uint256 currentRound = roundPassed + 1;
-        uint256 timeBeforeNextRound = block.timestamp - (currentRound * purse.time_interval);
+        uint256 timeForNextRound = currentRound * purse.time_interval;
 
         //current round is equivalent to position
         address _member = positionToUser[currentRound];
 
-        return(_member, currentRound, timeBeforeNextRound);
+        return(_member, currentRound, timeForNextRound);
         
     }
 

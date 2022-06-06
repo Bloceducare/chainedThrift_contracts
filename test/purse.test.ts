@@ -17,7 +17,7 @@ describe("Thrift", () => {
   let user2: SignerWithAddress;
   let user3: SignerWithAddress;
   
-  const _2_days_time = +new Date(Date.UTC(2022, 5, 26, 0, 0, 0)) / 1000;
+  const _2_days_time = +new Date(Date.UTC(2022, 6, 26, 0, 0, 0)) / 1000;
 
 
   before(async () => {
