@@ -132,6 +132,7 @@ contract PurseContract {
     }
 
     //deposit of collateral for creator happens in token factory- see createPurse function
+    // interval is in days
     constructor(
         address _creator,
         uint256 _amount,
@@ -145,14 +146,16 @@ contract PurseContract {
         uint256 _required_collateral = _amount * (_max_member - 1);
         purse.required_collateral = _required_collateral;
     
-        require(_position < _max_member, "position out of range");
+        require(_position <= _max_member, "position out of range");
         //  require(tokenInstance.balanceOf(address(this)) == (_amount + required_collateral), 'deposit of funds and collateral not happening, ensure you are deploying fron PurseFactory Contract');
         memberToDeposit[_creator] = _amount; //
         memberToCollateral[_creator] = _required_collateral;
         userPosition[_creator] = _position;
         positionToUser[_position] = _creator;
         members.push(_creator); //push member to array of members
-        purse.time_interval = time_interval;
+
+        //convert time_interval to 
+        purse.time_interval = time_interval * 24 * 60 * 60;
         isPurseMember[_creator] = true; //set msg.sender to be true as a member of the purse already
         purse.purseState = PurseState.Open; //set purse state to Open
         purse.contract_total_collateral_balance += _required_collateral; //increment mapping for all collaterals
@@ -179,7 +182,7 @@ contract PurseContract {
            isPurseMember[msg.sender] == false,
             "you are already a member in this purse"
         );
-        require(_position < purse.max_member_num, "position out of range");
+        require(_position <= purse.max_member_num, "position out of range");
         
         for(uint8 i = 0; i < members.length; i++){
             require(_position != userPosition[members[i]], "position taken");
@@ -390,18 +393,25 @@ contract PurseContract {
 
     // returns current round details, the member who is meant for the round, current round and time before next round
     function currentRoundDetails() public view returns(address, uint256, uint256){
+        require(purse.purseState == PurseState.Closed, "rounds yet to start");
         // a round should span for the time of "interval" set upon purse creation
+        
 
         //calculte how many of the "intervals" is passed to get what _position/round 
         uint256 roundPassed = (block.timestamp - purse.timeStarted) / purse.time_interval;
+
         uint256 currentRound = roundPassed + 1;
-        uint256 timeBeforeNextRound = (currentRound * purse.time_interval) - (block.timestamp);
+        uint256 timeBeforeNextRound = block.timestamp - (currentRound * purse.time_interval);
 
         //current round is equivalent to position
         address _member = positionToUser[currentRound];
 
         return(_member, currentRound, timeBeforeNextRound);
         
+    }
+
+      function purseMembers() public view returns(address[] memory){
+        return members;
     }
 
 
