@@ -65,7 +65,7 @@ describe("Thrift", () => {
     expect((await purse.purseMembers()).length).to.equal(3);
 
     
-    await timeTravel(_2_days_time);
+   // await timeTravel(_2_days_time);
     // calculate currentRoundDetails
 
     const roundDetails = await purse.currentRoundDetails();
