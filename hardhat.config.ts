@@ -33,19 +33,22 @@ const config: HardhatUserConfig = {
     }
   },
   networks: {
-    ropsten: {
-      url: process.env.ROPSTEN_URL || "",
+    goerli: {
+      url: process.env.Goerli_url,
       accounts:
-        process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+       {mnemonic: process.env.Mnemonic}
     },
   },
-  gasReporter: {
+  mocha: {
+    timeout: 0
+  },
+/*  gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,
     currency: "USD",
   },
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY,
-  },
+  }, */
 };
 
 export default config;

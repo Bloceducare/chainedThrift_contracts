@@ -16,6 +16,7 @@ describe("Thrift", () => {
   let user1: SignerWithAddress;
   let user2: SignerWithAddress;
   let user3: SignerWithAddress;
+ 
   
   const _2_days_time = +new Date(Date.UTC(2022, 6, 26, 0, 0, 0)) / 1000;
 
@@ -42,17 +43,25 @@ describe("Thrift", () => {
     await token.connect(user1).transfer(user2.address, 100);
     await token.connect(user1).transfer(user3.address, 100);
 
-    await purseFactory
+   const crp = await purseFactory
       .connect(user1)
       .createPurse(10, 3, 7, 1, token.address, 1);
-    const purseAddress = (await purseFactory.allPurse())[0];
+const crpEvent = ((await crp.wait()).events)[3].args;
+      const purse_add = crpEvent.purseAddress;
+     
+    //const purse_address = purseAddress.toString();
+  //  console.log(purseAddress.wait(), "purseAddress");
 
-    purse = await purseArtifacts.attach(purseAddress);
+    purse = await purseArtifacts.attach(purse_add);
+    console.log(purse, "purse");
 
   });
 
 
-  it("user can join a purse", async()=> {
+  describe(("purse functionalities"), async()=> {
+
+  
+  it("users can join a purse", async()=> {
 
     await token.connect(user2).approve(purse.address, 50);
     await token.connect(user3).approve(purse.address, 50);
@@ -63,6 +72,7 @@ describe("Thrift", () => {
 
 
     expect((await purse.purseMembers()).length).to.equal(3);
+    
 
     
    // await timeTravel(_2_days_time);
@@ -73,6 +83,7 @@ describe("Thrift", () => {
     console.log(roundDetails.toString(), "round details");
    
   })
+})
 
   
 });
