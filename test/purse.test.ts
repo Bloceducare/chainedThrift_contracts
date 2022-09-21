@@ -69,8 +69,14 @@ const crpEvent = ((await crp.wait()).events)[3].args;
     await purse.connect(user2).joinPurse(2);
     await purse.connect(user3).joinPurse(3);
 
+    const purse_members = await purse.purseMembers();
 
 
+
+
+    expect(purse_members.includes(user1.address, 0)).to.equal(true);
+    expect(purse_members.includes(user2.address, 0)).to.equal(true);
+    expect(purse_members.includes(user3.address, 0)).to.equal(true);
     expect((await purse.purseMembers()).length).to.equal(3);
     
 
