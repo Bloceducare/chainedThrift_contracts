@@ -118,7 +118,7 @@ contract PurseContract {
         address indexed _member,
         uint256 indexed _currentVotesFor
     );
-    event DonationDeposited(address indexed _member,uint256 _amount, address indexed purseAddress, uint256 indexed _time_created);
+    event DonationDeposited(address indexed _member,uint256 _amount, address indexed purseAddress, address _recipient);
 
     event ClaimedFull(address indexed _member, address indexed purseAddress, uint256 _amount, uint256 dateClaimed );
 
@@ -203,28 +203,6 @@ contract PurseContract {
         }
     }
 
-    /*    function voteToClosePurse() public returns(bool){
-        require(isPurseMember[msg.sender] == true, 'only members of this purse can vote to close purse');
-        require(purse.purseState == PurseState.Open, 'This purse is already closed'); //though frontend dev should disable closePurse button once a purse is closed already
-        require(member_close_Purse_Vote[msg.sender] == false, 'You have already voted, you cannot vote more than once to close a purse');//check to ensure a member cant vote more than once to close purse
-        
-        purse.voteToClose++;
-        
-        if(purse.voteToClose == purse.members.length){
-            //this if statemennt checks that no of votes equals no of members which will mean all members have voted
-            //and already there's a check above to ensure no member votes more than once to close a purse
-            purse.purseState = PurseState.Closed;
-            return true;
-            
-        } 
-        else{
-            return true;
-        }
-        
-        
-       
-    } */
-
     function depositDonation(address _member) public onlyPurseMember(msg.sender) {
        
         (address _currentMemberToRecieve, , ) =  currentRoundDetails();
@@ -237,7 +215,7 @@ contract PurseContract {
 
        has_donated_for_member[msg.sender][_member] = true;
         tokenInstance.transferFrom(msg.sender, address(this), purse.deposit_amount);
-        emit DonationDeposited(msg.sender, purse.deposit_amount, address(this), block.timestamp);
+        emit DonationDeposited(msg.sender, purse.deposit_amount, address(this), _member);
 
 
     }

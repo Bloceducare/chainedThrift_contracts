@@ -37,34 +37,36 @@ describe("Thrift", () => {
     token = await tokenArtifacts.deploy();
 
     // user1 should approve purseFactory address
-    await token.connect(user1).approve(purseFactory.address, 50);
+    await token.connect(user1).approve(purseFactory.address, (await ethers.utils.parseUnits("50","ether")).toString());
 
     //send tokens to user2 and 3
-    await token.connect(user1).transfer(user2.address, 100);
-    await token.connect(user1).transfer(user3.address, 100);
+    await token.connect(user1).transfer(user2.address, (await ethers.utils.parseUnits("100","ether")).toString());
+    await token.connect(user1).transfer(user3.address, (await ethers.utils.parseUnits("100","ether")).toString());
+
 
    const crp = await purseFactory
       .connect(user1)
-      .createPurse(10, 3, 7, 1, token.address, 1);
+      .createPurse((await ethers.utils.parseUnits("10","ether")).toString(), 3, 7, 1, token.address, 1);
 const crpEvent = ((await crp.wait()).events)[3].args;
+
       const purse_add = crpEvent.purseAddress;
      
     //const purse_address = purseAddress.toString();
   //  console.log(purseAddress.wait(), "purseAddress");
 
     purse = await purseArtifacts.attach(purse_add);
-    console.log(purse, "purse");
+   
 
   });
 
 
-  describe(("purse functionalities"), async()=> {
+  describe(("purse functionalities"), ()=> {
 
   
   it("users can join a purse", async()=> {
 
-    await token.connect(user2).approve(purse.address, 50);
-    await token.connect(user3).approve(purse.address, 50);
+    await token.connect(user2).approve(purse.address, (await ethers.utils.parseUnits("50","ether")).toString());
+    await token.connect(user3).approve(purse.address, (await ethers.utils.parseUnits("50","ether")).toString());
 
     await purse.connect(user2).joinPurse(2);
     await purse.connect(user3).joinPurse(3);
@@ -86,8 +88,34 @@ const crpEvent = ((await crp.wait()).events)[3].args;
 
     const roundDetails = await purse.currentRoundDetails();
 
-    console.log(roundDetails.toString(), "round details");
+    console.log(roundDetails, "round details");
    
+  });
+
+
+  it("should revert for a deposit for a user whose position is not yet time", async()=> [
+    await expect(purse.connect(user1).depositDonation(user2.address)).to.be.revertedWith("not this members round")
+
+  ])
+
+  it("should deposit donation and emit appropriate event", async()=> {
+    await expect(purse.connect(user2).depositDonation(user1.address)).to.emit(purse, "DonationDeposited").withArgs(user2.address, (await ethers.utils.parseUnits("10","ether")).toString(), purse.address, user1.address);
+    await expect(purse.connect(user3).depositDonation(user1.address)).to.emit(purse, "DonationDeposited").withArgs(user3.address, (await ethers.utils.parseUnits("10","ether")).toString(), purse.address, user1.address);
+  })
+
+  it("first user should be able to claim donation", async() => {
+    const userBalanceBeforeClaim:any = await ethers.utils.formatEther(await token.balanceOf(user1.address));
+
+    console.log(userBalanceBeforeClaim, "b4")
+
+   await purse.connect(user1).claimDonations()
+
+    const newBalance:any = await ethers.utils.formatEther(await token.balanceOf(user1.address))
+   
+    
+
+   await expect(newBalance - userBalanceBeforeClaim).to.equals(20)
+    
   })
 })
 
