@@ -23,7 +23,7 @@ contract PurseFactory{
         //purse factory contract should be approved
         require(tokenInstance.transferFrom(msg.sender, address(purse), (_collateral)), 'transfer to purse not successful');
         _list_of_purses.push(address(purse));
-        purse_count = purse_count++;
+        purse_count++;
         id_to_purse[address(purse)] = purse_count;
         purseToChatId[address(purse)] = chatId;
         

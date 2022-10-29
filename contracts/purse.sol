@@ -44,7 +44,6 @@ contract PurseContract {
         uint256 max_member_num;
         uint256 required_collateral;
         uint256 purseId;
-       // uint256 increment_in_membership;
         uint256 num_of_members_who_has_recieved_funds;
         address _address_of_token;
         address purseAddress;
@@ -100,11 +99,11 @@ contract PurseContract {
     Purse public purse; //instantiate struct purse
     MemberVoteForPurseState public memberVoteForPurseState;
     
-    address admin = 0x9dc821bc9B379a002E5bD4A1Edf200c19Bc5F9CA;
+    address constant ADMIN = 0x9dc821bc9B379a002E5bD4A1Edf200c19Bc5F9CA;
 
     //instantiate IBentoxBox on mumbai
-    address bentoBox_address = 0xF5BCE5077908a1b7370B9ae04AdC565EBd643966;
-    IBentoxBox bentoBoxInstance = IBentoxBox(bentoBox_address);
+    address constant BENTOBOX_ADDRESS = 0xF5BCE5077908a1b7370B9ae04AdC565EBd643966;
+    IBentoxBox bentoBoxInstance = IBentoxBox(BENTOBOX_ADDRESS);
 
     //events
     event PurseCreated(
@@ -123,6 +122,8 @@ contract PurseContract {
     event ClaimedFull(address indexed _member, address indexed purseAddress, uint256 _amount, uint256 dateClaimed );
 
     event ClaimedPart(address indexed _member, address indexed purseAddress, uint256 _amount, uint256 dateClaimed );
+
+    event MemberLeft(address indexed _member, uint256 _time);
 
 
     modifier onlyPurseMember(address _address){
@@ -174,6 +175,7 @@ contract PurseContract {
         */
 
     function joinPurse(uint256 _position) public {
+        
         require(
             purse.purseState == PurseState.Open,
             "This purse is not longer accepting members"
@@ -184,8 +186,9 @@ contract PurseContract {
         );
         require(_position <= purse.max_member_num, "position out of range");
         
-        for(uint8 i = 0; i < members.length; i++){
-            require(_position != userPosition[members[i]], "position taken");
+        address[] memory _members = members;
+        for(uint8 i = 0; i < _members.length; i++){
+            require(_position != userPosition[_members[i]], "position taken");
         }
        
         tokenInstance.transferFrom(msg.sender, address(this), (purse.required_collateral));
@@ -201,6 +204,30 @@ contract PurseContract {
             purse.purseState = PurseState.Closed;
             purse.timeStarted = block.timestamp;
         }
+    }
+
+    /// @notice this function is available in the instance a purse doesn't get full on time
+    /// and a member wants to leave
+    function leavePurse() public onlyPurseMember(msg.sender){
+         require(purse.purseState == PurseState.Open, "purse started already");
+         isPurseMember[msg.sender] = false;
+         userPosition[msg.sender] = 0;
+         memberToCollateral[msg.sender] = 0;
+         purse.contract_total_collateral_balance -= purse.required_collateral;
+         
+         // gets the index of the member trying to leave from the array of members
+         // switches the position pf the member to be removed as last item and vice vers
+         // then pop it
+         for(uint8 i = 0; i < members.length; i++){
+            if(members[i] == msg.sender){
+              members[i] = members[members.length - 1];
+              members[members.length - 1] = msg.sender;
+              members.pop();
+            }
+         }
+         tokenInstance.transfer(msg.sender, (purse.required_collateral));
+         emit MemberLeft(msg.sender, block.timestamp);
+
     }
 
     function depositDonation(address _member) public onlyPurseMember(msg.sender) {
@@ -262,7 +289,7 @@ contract PurseContract {
             "members to be in purse are yet to be completed, so collaterals are not complete"
         );
         uint256 MAX_UINT256 = purse.contract_total_collateral_balance;
-        tokenInstance.approve(bentoBox_address, MAX_UINT256);
+        tokenInstance.approve(BENTOBOX_ADDRESS, MAX_UINT256);
         bentoBoxInstance.deposit(
             tokenInstance,
             address(this),
@@ -313,40 +340,61 @@ contract PurseContract {
         //20% of yields goes to purseFactory admin
         uint256 yields_to_admin = (yields * 8) / 100;
          yields_to_members = yields - yields_to_admin;
-        tokenInstance.transfer(admin, yields_to_admin);
+        tokenInstance.transfer(ADMIN, yields_to_admin);
 
         total_returns_to_members = shares - yields_to_admin;
        
     }
 
-    function calculateMissedDonationForUser(address _memberAdress) public view onlyPurseMember(_memberAdress) returns(address[] memory, uint256 ){
+    function calculateMissedDonationForUser(address _memberAdress) public view onlyPurseMember(_memberAdress) returns(address[] memory trimmed_members_who_didnt_donate_for_user, uint256 ){
         address[] memory members_who_didnt_donate_for_user = new address[](members.length -1);
-
+    //    address[] memory members_list = members;
+        uint256 count = 0;
 
         for(uint256 i =0; i < members.length; i++){
             if(members[i] != _memberAdress && has_donated_for_member[members[i]][_memberAdress] == false ){
                 members_who_didnt_donate_for_user[i] = (members[i]);
+                count += 1;
                 
             }
         }
 
-        return(members_who_didnt_donate_for_user, members_who_didnt_donate_for_user.length * purse.deposit_amount);
+        // instantiate the return array with the length of number of members who didn't donate for this user
+        trimmed_members_who_didnt_donate_for_user = new address[](count);
+        for(uint256 j = 0; j < count; j++){
+            if(members_who_didnt_donate_for_user[j] != address(0)){
+                trimmed_members_who_didnt_donate_for_user[j] = members_who_didnt_donate_for_user[j];
+            }
+        }
+
+        return(trimmed_members_who_didnt_donate_for_user, trimmed_members_who_didnt_donate_for_user.length * purse.deposit_amount);
 
           
     }
 
-    function calculateMissedDonationByUser(address _memberAdress) public view onlyPurseMember(_memberAdress) returns(address[] memory, uint256 ){
+    function calculateMissedDonationByUser(address _memberAdress) public view onlyPurseMember(_memberAdress) returns(address[] memory trimmed_members_who_member_didnt_donate_for , uint256 ){
        
         address[] memory members_who_member_didnt_donate_for = new address[](members.length -1);
+        //keep count of valid entry of members in the above array
+        uint256 count = 0;
 
         for(uint256 i =0; i < members.length; i++){
             if(members[i] != _memberAdress && has_donated_for_member[_memberAdress][members[i]] == false ){
                 members_who_member_didnt_donate_for[i] = (members[i]);
+                count += 1;
                 
             }
         }
 
-        return(members_who_member_didnt_donate_for, members_who_member_didnt_donate_for.length * purse.deposit_amount);
+        //instantiate the return array with the lenght of number of members who this member didn't donate for
+        trimmed_members_who_member_didnt_donate_for = new address[](count);
+        for(uint256 j = 0; j < count; j++){
+            if(members_who_member_didnt_donate_for[j] != address(0)){
+              trimmed_members_who_member_didnt_donate_for[j] = members_who_member_didnt_donate_for[j];
+            }
+        }
+
+        return(trimmed_members_who_member_didnt_donate_for, trimmed_members_who_member_didnt_donate_for.length * purse.deposit_amount);
 
           
     }
