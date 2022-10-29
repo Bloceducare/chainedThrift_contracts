@@ -375,7 +375,7 @@ contract PurseContract {
     function calculateMissedDonationByUser(address _memberAdress) public view onlyPurseMember(_memberAdress) returns(address[] memory trimmed_members_who_member_didnt_donate_for , uint256 ){
        
         address[] memory members_who_member_didnt_donate_for = new address[](members.length -1);
-        //keep count of valid entry of members in the above array
+        //keep count of valid entry of members in the above array,
         uint256 count = 0;
 
         for(uint256 i =0; i < members.length; i++){
