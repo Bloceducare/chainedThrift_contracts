@@ -53,7 +53,7 @@ contract PurseContract {
     
         mapping(address => bool) public  isPurseMember;
         mapping(address => uint256) public memberToCollateral; //map a user tp ccollateral deposited
-        mapping(address => uint256) public memberToDeposit;
+        mapping(address => uint256) public memberToDeposit; // user to deposit
         mapping(address => bool) public member_has_recieved;
         mapping(address => mapping(address => bool)) public has_donated_for_member;
         mapping(address => uint256) public userClaimableDeposit;
@@ -417,7 +417,7 @@ contract PurseContract {
     }
 
 
-    // returns current round details, the member who is meant for the round, current round and time before next round
+    // returns current round details, the member who is meant for the round, current round and time before next round-
     function currentRoundDetails() public view returns(address, uint256, uint256){
         require(purse.purseState == PurseState.Closed, "rounds yet to start");
         // a round should span for the time of "interval" set upon purse creation
