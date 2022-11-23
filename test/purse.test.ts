@@ -65,12 +65,13 @@ const crpEvent = ((await crp.wait()).events)[3].args;
   describe(("purse functionalities"), ()=> {
 
   
-  it("users can join a purse", async()=> {
+  it("users can join a purse and should revert for an existing member", async()=> {
 
     await token.connect(user2).approve(purse.address, (await ethers.utils.parseUnits("50","ether")).toString());
     await token.connect(user3).approve(purse.address, (await ethers.utils.parseUnits("50","ether")).toString());
 
     await purse.connect(user2).joinPurse(2);
+    await expect(purse.connect(user2).joinPurse(2)).to.be.revertedWith("you are already a member in this purse");
     await purse.connect(user3).joinPurse(3);
 
     const purse_members = await purse.purseMembers();
@@ -98,6 +99,7 @@ const crpEvent = ((await crp.wait()).events)[3].args;
      await expect(purse.connect(non_member).joinPurse(3)).to.be.revertedWith("This purse is not longer accepting members");
   })
 
+  
 
   it("should revert for a deposit for a user whose position is not yet time", async()=> [
     await expect(purse.connect(user1).depositDonation(user2.address)).to.be.revertedWith("not this members round")
