@@ -16,13 +16,14 @@ describe("Thrift", () => {
   let user1: SignerWithAddress;
   let user2: SignerWithAddress;
   let user3: SignerWithAddress;
+  let non_member: SignerWithAddress
  
   
   const _2_days_time = +new Date(Date.UTC(2022, 6, 26, 0, 0, 0)) / 1000;
 
 
   before(async () => {
-    [user1, user2, user3] = await ethers.getSigners();
+    [user1, user2, user3, non_member] = await ethers.getSigners();
 
     const purseFactoryArtifacts = await ethers.getContractFactory(
       "PurseFactory"
@@ -39,9 +40,10 @@ describe("Thrift", () => {
     // user1 should approve purseFactory address
     await token.connect(user1).approve(purseFactory.address, (await ethers.utils.parseUnits("50","ether")).toString());
 
-    //send tokens to user2 and 3
+    //send tokens to user2 and 3 and non_member
     await token.connect(user1).transfer(user2.address, (await ethers.utils.parseUnits("100","ether")).toString());
     await token.connect(user1).transfer(user3.address, (await ethers.utils.parseUnits("100","ether")).toString());
+    await token.connect(user1).transfer(non_member.address, (await ethers.utils.parseUnits("100","ether")).toString());
 
 
    const crp = await purseFactory
@@ -63,12 +65,13 @@ const crpEvent = ((await crp.wait()).events)[3].args;
   describe(("purse functionalities"), ()=> {
 
   
-  it("users can join a purse", async()=> {
+  it("users can join a purse and should revert for an existing member", async()=> {
 
     await token.connect(user2).approve(purse.address, (await ethers.utils.parseUnits("50","ether")).toString());
     await token.connect(user3).approve(purse.address, (await ethers.utils.parseUnits("50","ether")).toString());
 
     await purse.connect(user2).joinPurse(2);
+    await expect(purse.connect(user2).joinPurse(2)).to.be.revertedWith("you are already a member in this purse");
     await purse.connect(user3).joinPurse(3);
 
     const purse_members = await purse.purseMembers();
@@ -92,6 +95,11 @@ const crpEvent = ((await crp.wait()).events)[3].args;
    
   });
 
+  it("should revert if a new user attempts to join this purse after max number of members have joined", async()=> {
+     await expect(purse.connect(non_member).joinPurse(3)).to.be.revertedWith("This purse is not longer accepting members");
+  })
+
+  
 
   it("should revert for a deposit for a user whose position is not yet time", async()=> [
     await expect(purse.connect(user1).depositDonation(user2.address)).to.be.revertedWith("not this members round")
@@ -99,6 +107,7 @@ const crpEvent = ((await crp.wait()).events)[3].args;
   ])
 
   it("should deposit donation and emit appropriate event", async()=> {
+    
     await expect(purse.connect(user2).depositDonation(user1.address)).to.emit(purse, "DonationDeposited").withArgs(user2.address, (await ethers.utils.parseUnits("10","ether")).toString(), purse.address, user1.address);
     await expect(purse.connect(user3).depositDonation(user1.address)).to.emit(purse, "DonationDeposited").withArgs(user3.address, (await ethers.utils.parseUnits("10","ether")).toString(), purse.address, user1.address);
   })
