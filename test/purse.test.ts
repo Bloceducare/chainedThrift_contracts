@@ -2,11 +2,14 @@ import "@nomiclabs/hardhat-ethers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import { Contract } from "ethers";
-import { ethers } from "hardhat";
+import hre, { ethers } from "hardhat";
+//import { time } from "@nomicfoundation/hardhat-network-helpers";
+//import {time} from "@openzeppelin/test-helpers";
 import { timeTravel } from "./test-utils";
 import {PurseFactory} from "../typechain";
 import {PurseContract} from "../typechain";
 import {Token} from "../typechain";
+
 
 
 describe("Thrift", () => {
@@ -19,7 +22,7 @@ describe("Thrift", () => {
   let non_member: SignerWithAddress
  
   
-  const _2_days_time = +new Date(Date.UTC(2022, 6, 26, 0, 0, 0)) / 1000;
+  
 
 
   before(async () => {
@@ -125,6 +128,35 @@ const crpEvent = ((await crp.wait()).events)[3].args;
 
    await expect(newBalance - userBalanceBeforeClaim).to.equals(20)
     
+  })
+
+  it("should return correct round details", async()=> {
+    const roundDetails = await purse.currentRoundDetails();
+    expect(roundDetails[0]).to.eq(user1.address);
+    console.log(roundDetails, "first round details");
+    
+   //increase timestamp by atleast 7days
+   const str = '2022-12-04';
+
+   const date = new Date(str);
+
+   const next_timestamp = Math.floor(date.getTime() / 1000);
+    await timeTravel(next_timestamp);
+
+    
+    //check that user2 owns current round at this time
+    const second_roundDetails = await purse.currentRoundDetails();
+    expect(second_roundDetails[0]).to.eq(user2.address);
+    console.log(second_roundDetails, "second round details")
+
+
+
+    
+  //  const next_timestamp = next_date.getTime();
+
+    
+
+   
   })
 })
 
