@@ -130,23 +130,32 @@ const crpEvent = ((await crp.wait()).events)[3].args;
     
   })
 
-  it("should return correct round details", async()=> {
+  it("should return correct round details and check for next round", async()=> {
     const roundDetails = await purse.currentRoundDetails();
     expect(roundDetails[0]).to.eq(user1.address);
+    expect(roundDetails[1]).to.eq(1);
     console.log(roundDetails, "first round details");
     
-   //increase timestamp by atleast 7days
-   const str = '2022-12-04';
+   //increase timestamp by atleast 7days- this is 8days from now
+   const next_thrift_period = '2022-12-05';
 
-   const date = new Date(str);
+   const date = new Date(next_thrift_period);
 
    const next_timestamp = Math.floor(date.getTime() / 1000);
+
+  
+  // check timtstamp for next round
+  expect(Number(roundDetails[2])).to.lessThan(Number(next_timestamp))
+
     await timeTravel(next_timestamp);
 
     
     //check that user2 owns current round at this time
     const second_roundDetails = await purse.currentRoundDetails();
     expect(second_roundDetails[0]).to.eq(user2.address);
+    expect(second_roundDetails[1]).to.eq(2);
+    
+
     console.log(second_roundDetails, "second round details")
 
 
