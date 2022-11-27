@@ -13,32 +13,41 @@ import {Token} from "../typechain";
 
 
 describe("Thrift", () => {
+  
   let purseFactory: Contract;
-  let purse: Contract;
   let token: Contract;
   let user1: SignerWithAddress;
   let user2: SignerWithAddress;
   let user3: SignerWithAddress;
   let non_member: SignerWithAddress
- 
-  
-  
 
-
-  before(async () => {
+  before(async() => {
     [user1, user2, user3, non_member] = await ethers.getSigners();
 
     const purseFactoryArtifacts = await ethers.getContractFactory(
       "PurseFactory"
     );
-    const purseArtifacts = await ethers.getContractFactory("PurseContract");
-    const tokenArtifacts = await ethers.getContractFactory("Token");
-
     // deploy purseFactory
     purseFactory = await purseFactoryArtifacts.deploy();
 
+    const tokenArtifacts = await ethers.getContractFactory("Token");
+
     // deploy token
     token = await tokenArtifacts.deploy();
+
+  })
+
+  describe(("purse: assuming all members donate as at when due"), async ()=> {
+
+    
+    let purse: Contract;
+  
+
+  before(async () => {
+   
+
+    const purseArtifacts = await ethers.getContractFactory("PurseContract");
+    
 
     // user1 should approve purseFactory address
     await token.connect(user1).approve(purseFactory.address, (await ethers.utils.parseUnits("50","ether")).toString());
@@ -63,9 +72,6 @@ const crpEvent = ((await crp.wait()).events)[3].args;
    
 
   });
-
-
-  describe(("purse functionalities"), ()=> {
 
   
   it("users can join a purse and should revert for an existing member", async()=> {
