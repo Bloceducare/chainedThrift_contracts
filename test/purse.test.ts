@@ -157,15 +157,62 @@ const crpEvent = ((await crp.wait()).events)[3].args;
     
 
     console.log(second_roundDetails, "second round details")
-
-
-
-    
-  //  const next_timestamp = next_date.getTime();
-
-    
-
    
+  })
+
+  it("should let the other users claim assume they all donate: for user2 and user3", async()=> {
+
+
+      //for user2
+    await token.connect(user1).approve(purse.address, (await ethers.utils.parseUnits("10","ether")).toString());
+    await token.connect(user3).approve(purse.address, (await ethers.utils.parseUnits("10","ether")).toString());
+
+    //user1 and user3 should donate for user2
+    await expect(purse.connect(user1).depositDonation(user2.address)).to.emit(purse, "DonationDeposited").withArgs(user1.address, (await ethers.utils.parseUnits("10","ether")).toString(), purse.address, user2.address);
+    await expect(purse.connect(user3).depositDonation(user2.address)).to.emit(purse, "DonationDeposited").withArgs(user3.address, (await ethers.utils.parseUnits("10","ether")).toString(), purse.address, user2.address);
+
+    const user2BalanceBeforeClaim:any = await ethers.utils.formatEther(await token.balanceOf(user2.address));
+
+   await purse.connect(user2).claimDonations()
+
+    const newUser2Balance:any = await ethers.utils.formatEther(await token.balanceOf(user2.address))
+
+    console.log(user2BalanceBeforeClaim, newUser2Balance);
+   
+  // expect his balance to have increased  by 20
+   await expect(newUser2Balance - user2BalanceBeforeClaim).to.equals(20)
+
+
+   //for user 3 
+   // first shift timestamp
+
+   //increase timestamp by atleast 7days- this is 8days from now
+   const next_thrift_period = '2022-12-13';
+
+   const date = new Date(next_thrift_period);
+
+   const next_timestamp = Math.floor(date.getTime() / 1000);
+
+    await timeTravel(next_timestamp);
+
+    await token.connect(user1).approve(purse.address, (await ethers.utils.parseUnits("10","ether")).toString());
+    await token.connect(user2).approve(purse.address, (await ethers.utils.parseUnits("10","ether")).toString());
+
+    //user1 and user3 should donate for user2
+    await expect(purse.connect(user1).depositDonation(user3.address)).to.emit(purse, "DonationDeposited").withArgs(user1.address, (await ethers.utils.parseUnits("10","ether")).toString(), purse.address, user3.address);
+    await expect(purse.connect(user2).depositDonation(user3.address)).to.emit(purse, "DonationDeposited").withArgs(user2.address, (await ethers.utils.parseUnits("10","ether")).toString(), purse.address, user3.address);
+
+    const user3BalanceBeforeClaim:any = await ethers.utils.formatEther(await token.balanceOf(user3.address));
+
+   await purse.connect(user3).claimDonations()
+
+    const newUser3Balance:any = await ethers.utils.formatEther(await token.balanceOf(user3.address))
+
+    console.log(user3BalanceBeforeClaim, newUser3Balance);
+   
+  // expect his balance to have increased  by 20
+   await expect(newUser3Balance - user3BalanceBeforeClaim).to.equals(20)
+
   })
 })
 
