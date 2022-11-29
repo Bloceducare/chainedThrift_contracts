@@ -52,6 +52,7 @@ contract PurseContract {
     mapping(address => uint256) public memberToDeposit; // user to deposit
     mapping(address => bool) public member_has_recieved;
     mapping(address => mapping(address => bool)) public has_donated_for_member;
+     mapping(address => mapping(address => bool)) public has_been_donated_for_by_member;
     mapping(address => uint256) public userClaimableDeposit;
     mapping(address => bool) public approve_To_Claim_Without_Complete_Votes;
     mapping(address => uint256) public votes_for_member_to_recieve_funds;
@@ -132,7 +133,7 @@ contract PurseContract {
     event MemberLeft(address indexed _member, uint256 _time);
 
     modifier onlyPurseMember(address _address) {
-        require(isPurseMember[msg.sender] == true, "only purse members please");
+        require(isPurseMember[_address] == true, "only purse members please");
         _;
     }
 
@@ -260,6 +261,7 @@ contract PurseContract {
         purse.contract_total_deposit_balance += purse.deposit_amount;
 
         has_donated_for_member[msg.sender][_member] = true;
+        has_been_donated_for_by_member[_member][msg.sender] = true;
         tokenInstance.transferFrom(
             msg.sender,
             address(this),
@@ -414,10 +416,17 @@ contract PurseContract {
         for (uint256 i = 0; i < members.length; i++) {
             if (
                 members[i] != _memberAdress &&
-                has_donated_for_member[members[i]][_memberAdress] == false
+               has_been_donated_for_by_member[_memberAdress][members[i]] == false
             ) {
-                members_who_didnt_donate_for_user[i] = (members[i]);
-                count += 1;
+                if(count == 0){
+                     members_who_didnt_donate_for_user[0] = members[i];
+                     count += 1;
+                }
+                else{
+                    members_who_didnt_donate_for_user[count+1] = members[i];
+                    count += 1;
+                }
+               
             }
         }
 
@@ -456,10 +465,17 @@ contract PurseContract {
         for (uint256 i = 0; i < members.length; i++) {
             if (
                 members[i] != _memberAdress &&
-                has_donated_for_member[_memberAdress][members[i]] == false
+                has_donated_for_member[members[i]][_memberAdress] == false
             ) {
-                members_who_member_didnt_donate_for[i] = (members[i]);
-                count += 1;
+
+                if(count == 0){
+                    members_who_member_didnt_donate_for[0] = (members[i]);
+                    count += 1;
+                }else{
+                    members_who_member_didnt_donate_for[count + 1] = (members[i]);
+                    count += 1;
+                }
+               
             }
         }
 

@@ -38,5 +38,8 @@
     "@nomicfoundation/hardhat-network-helpers": "^1.0.6",
     "@openzeppelin/contracts": "^4.5.0",
     "@openzeppelin/test-helpers": "^0.5.16"
+  },
+  "scripts": {
+    "prettier-format": "prettier --config .prettierrc 'test/**/*.ts' --write"
   }
 }
