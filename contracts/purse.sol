@@ -67,11 +67,6 @@ contract PurseContract {
     uint256 public total_returns_to_members;
     uint256 public yields_to_members;
 
-    struct MemberVoteForPurseState {
-        uint256 voteToClose;
-        uint256 voteToReOpen;
-        uint256 voteToTerminate;
-    }
 
     //map a user to amount deposited- ofcourse all members will deposit same amount
     //map a user's membership of a purse to true
@@ -88,7 +83,8 @@ contract PurseContract {
 
     IERC20 tokenInstance;
     Purse public purse; //instantiate struct purse
-    MemberVoteForPurseState public memberVoteForPurseState;
+
+
 
     address constant ADMIN = 0x9dc821bc9B379a002E5bD4A1Edf200c19Bc5F9CA;
 
