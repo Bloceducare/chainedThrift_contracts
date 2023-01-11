@@ -146,7 +146,7 @@ contract PurseContract {
         uint256 time_interval,
         address _tokenAddress,
         uint256 _position
-    ) payable {
+    ) {
         purse.deposit_amount = _amount; //set this amount to deposit_amount
         purse.max_member_num = _max_member; //set max needed member
         uint256 _required_collateral = _amount * (_max_member - 1);
