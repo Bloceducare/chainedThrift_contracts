@@ -289,7 +289,7 @@ contract PurseContract {
         ) {
             require(
                 approve_To_Claim_Without_Complete_Votes[msg.sender] == true,
-                "you could either approve yourself or let another team member approve that you can claim without complete donation using the approveToClaimWithoutCompleteVotes function "
+                "get approved to recieve incomplete donation"
             );
             purse.num_of_members_who_has_recieved_funds += 1;
             member_has_recieved[msg.sender] = true;
@@ -335,7 +335,7 @@ contract PurseContract {
     function deposit_funds_to_bentoBox() internal onlyPurseMember(msg.sender) {
         require(
             members.length == purse.max_member_num,
-            "members to be in purse are yet to be completed, so collaterals are not complete"
+            "incomplete membership yet"
         );
         uint256 MAX_UINT256 = purse.contract_total_collateral_balance;
         tokenInstance.approve(BENTOBOX_ADDRESS, MAX_UINT256);
@@ -361,10 +361,7 @@ contract PurseContract {
     //any member can call this function
     function withdraw_funds_from_bentoBox() public onlyPurseMember(msg.sender) {
         //    require(block.timestamp >= (purse.time_interval * max_member_num), 'Not yet time for withdrawal');
-        require(
-            purse.num_of_members_who_has_recieved_funds == members.length,
-            "Not yet time, not all members have recieved a round of contribution"
-        );
+        require(block.timestamp >= (purse.timeStarted + (purse.time_interval * members.length)), 'till purse rounds are completed');
         //      require(
         //        for(uint256 i=0; i<purse.members.length; i++){
         //          member_has_recieved[purse.members[i]] == true;
