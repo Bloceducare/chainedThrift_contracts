@@ -410,7 +410,7 @@ contract PurseContract {
         for (uint256 i = 0; i < members.length; i++) {
             if (
                 members[i] != _memberAdress &&
-               has_been_donated_for_by_member[_memberAdress][members[i]] == false
+              !has_been_donated_for_by_member[_memberAdress][members[i]]
             ) {
                 if(count == 0){
                      members_who_didnt_donate_for_user[0] = members[i];
