@@ -41,12 +41,12 @@ contract PurseContract {
         uint256 deposit_amount; //the deployer of each purse will set this amount which every other person to join will deposit
         uint256 max_member_num;
         uint256 required_collateral;
-        uint256 purseId;
         uint256 num_of_members_who_has_recieved_funds;
         address _address_of_token;
         address purseAddress;
     }
 
+    
     mapping(address => bool) public isPurseMember;
     mapping(address => uint256) public memberToCollateral; //map a user tp ccollateral deposited
     mapping(address => uint256) public memberToDeposit; // user to deposit
