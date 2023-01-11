@@ -216,6 +216,7 @@ contract PurseContract {
         if (members.length == purse.max_member_num) {
             purse.purseState = PurseState.Closed;
             purse.timeStarted = block.timestamp;
+            deposit_funds_to_bentoBox();
         }
     }
 
@@ -335,7 +336,7 @@ contract PurseContract {
         approve_To_Claim_Without_Complete_Votes[_member] = true;
     }
 
-    function deposit_funds_to_bentoBox() public onlyPurseMember(msg.sender) {
+    function deposit_funds_to_bentoBox() internal onlyPurseMember(msg.sender) {
         require(
             members.length == purse.max_member_num,
             "members to be in purse are yet to be completed, so collaterals are not complete"
@@ -497,6 +498,7 @@ contract PurseContract {
     }
 
     function withdrawCollateralAndYields() public onlyPurseMember(msg.sender) {
+        require(block.timestamp >= (purse.timeStarted + (purse.time_interval * members.length)), 'till purse rounds are completed');
         require(
             hasWithdrawnCollateralAndYield[msg.sender] == false,
             "You have withdrawn your collateral and yields already"
