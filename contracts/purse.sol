@@ -189,7 +189,7 @@ contract PurseContract {
             isPurseMember[msg.sender] == false,
             "you are already a member in this purse"
         );
-        require(_position <= purse.max_member_num, "position out of range");
+        require( _position != 0 && _position <= purse.max_member_num, "position out of range");
 
         address[] memory _members = members;
         for (uint8 i = 0; i < _members.length; i++) {
