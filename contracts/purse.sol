@@ -56,9 +56,7 @@ contract PurseContract {
     mapping(address => uint256) public userClaimableDeposit;
     mapping(address => bool) public approve_To_Claim_Without_Complete_Votes;
     mapping(address => uint256) public votes_for_member_to_recieve_funds;
-    mapping(address => bool) public member_close_Purse_Vote;
-    mapping(address => bool) public member_reOpen_Purse_Vote;
-    mapping(address => bool) public member_terminate_PurseVote;
+
     mapping(address => bool) public hasWithdrawnCollateralAndYield;
     mapping(address => uint256) public userPosition;
     mapping(uint256 => address) public positionToUser;
@@ -360,13 +358,9 @@ contract PurseContract {
 
     //any member can call this function
     function withdraw_funds_from_bentoBox() public onlyPurseMember(msg.sender) {
-        //    require(block.timestamp >= (purse.time_interval * max_member_num), 'Not yet time for withdrawal');
+      
         require(block.timestamp >= (purse.timeStarted + (purse.time_interval * members.length)), 'till purse rounds are completed');
-        //      require(
-        //        for(uint256 i=0; i<purse.members.length; i++){
-        //          member_has_recieved[purse.members[i]] == true;
-        //        }, 'Not all members have recieved thier round of contribution'
-        //          );
+        
         uint256 bento_box_balance = bentoBoxInstance.balanceOf(
             purse._address_of_token,
             address(this)
@@ -494,7 +488,7 @@ contract PurseContract {
         require(block.timestamp >= (purse.timeStarted + (purse.time_interval * members.length)), 'till purse rounds are completed');
         require(
             hasWithdrawnCollateralAndYield[msg.sender] == false,
-            "You have withdrawn your collateral and yields already"
+            "collateral and yields withdrawn already"
         );
 
         // calculate the amount of rounds this user missed
